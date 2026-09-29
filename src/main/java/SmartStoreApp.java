@@ -14,8 +14,8 @@ public class SmartStoreApp {
         // 프로그램 실행 상태를 제어하는 변수
         boolean isRunning = true;
 
-        // 데이터베이스를 연결해줄 DAO 불러오기
-        SmartDeviceDAO dao = new SmartDeviceDAO();
+        // 홀 직원은 이제 매니저(Service)하고 소통해야 한다 (Main - Service - DAO - DB)
+        SmartDeviceService service = new SmartDeviceService();
 
         System.out.println("===================================");
         System.out.println("   SmartStore Management System   ");
@@ -39,8 +39,8 @@ public class SmartStoreApp {
                 case 1:  // SELECT 구현
                     System.out.println("\n### Viewing device list...");
 
-                    // DAO에게 전제 기기 목록(DTO 묶음) 가져오라고 시키기
-                    ArrayList<SmartDevice> list = dao.getAllDevices();
+                    // Service에게 전제 기기 목록(DTO 묶음) 가져오라고 시키기
+                    ArrayList<SmartDevice> list = service.getAllDevices();
 
                     System.out.println("--------------------------------------------");
                     System.out.println(" ID |         Model         |    Price    |");
@@ -76,10 +76,8 @@ public class SmartStoreApp {
                     // DTO 하나에 데이터들을 예쁘게 포장
                     SmartDevice device = new SmartDevice(newId, newName, newPrice);
 
-                    // 포장된 DTO를 DAO에게 전달하여 데이터베이스에 삽입
-                    int insertResult = dao.insertDevice(device);
-                    System.out.println("Success: " + insertResult + " device added!");
-
+                    // 포장된 DTO를 Service에게 전달하여 데이터베이스에 삽입
+                    service.addDevice(device);
                     break;
 
                 case 3:  // UPDATE 구현
@@ -92,15 +90,8 @@ public class SmartStoreApp {
                     System.out.print("Enter New Price: ");
                     int updatePrice = scanner.nextInt();
 
-                    // DAO에게 ID와 새로운 가격을 넘겨주며 수정을 지시
-                    int updateResult = dao.updateDevice(targetId, updatePrice);
-
-                    if(updateResult > 0) {
-                        System.out.println("Success: Price Updated!");
-                    } else {
-                        System.out.println("Fail: ID not found");
-                    }
-
+                    // Service에게 ID와 새로운 가격을 넘겨주며 수정을 지시
+                    service.updateDevice(targetId, updatePrice);
                     break;
 
                 case 4:  // DELETE 구현
@@ -109,15 +100,8 @@ public class SmartStoreApp {
                     System.out.print("Enter Target ID to Delete: ");
                     int deleteId = scanner.nextInt();
 
-                    // DAO에게 삭제할 ID를 넘겨주며 삭제를 지시
-                    int deleteResult = dao.deleteDevice(deleteId);
-
-                    if(deleteResult > 0) {
-                        System.out.println("Success: Device Deleted!");
-                    } else {
-                        System.out.println("Fail: ID not found");
-                    }
-
+                    // Service에게 삭제할 ID를 넘겨주며 삭제를 지시
+                    service.deleteDevice(deleteId);
                     break;
 
                 case 0:
