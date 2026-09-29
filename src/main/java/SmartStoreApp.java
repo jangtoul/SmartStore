@@ -3,6 +3,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class SmartStoreApp {
@@ -13,158 +14,122 @@ public class SmartStoreApp {
         // 프로그램 실행 상태를 제어하는 변수
         boolean isRunning = true;
 
+        // 데이터베이스를 연결해줄 DAO 불러오기
+        SmartDeviceDAO dao = new SmartDeviceDAO();
+
         System.out.println("===================================");
         System.out.println("   SmartStore Management System   ");
         System.out.println("===================================");
 
-        // 데이터베이스 접속 정보 설정
-        String url = "jdbc:mysql://localhost:3306/shop";
-        String user = "root";
-        String password = "*****";
+        // isRunning이 true인 동안 무한 반복
+        while(isRunning){
+            // 메인 메뉴 출력
+            System.out.println("\n[1] View Device List");
+            System.out.println("[2] Add New Device");
+            System.out.println("[3] Update Device Price");
+            System.out.println("[4] Delete Device");
+            System.out.println("[0] Exit System");
+            System.out.printf("Select Menu: ");
 
-        try {
-            // 데이터베이스 연결 (파이프 생성)
-            Connection conn = DriverManager.getConnection(url, user, password);
-            System.out.println("\n### DB Connected Successfully!");
+            // 사용자가 입력한 숫자 받기
+            int choice = scanner.nextInt();
 
-            // isRunning이 true인 동안 무한 반복
-            while(isRunning){
-                // 메인 메뉴 출력
-                System.out.println("\n[1] View Device List");
-                System.out.println("[2] Add New Device");
-                System.out.println("[3] Update Device Price");
-                System.out.println("[4] Delete Device");
-                System.out.println("[0] Exit System");
-                System.out.printf("Select Menu: ");
+            // 메뉴 선택에 따른 분기 처리
+            switch (choice){
+                case 1:  // SELECT 구현
+                    System.out.println("\n### Viewing device list...");
 
-                // 사용자가 입력한 숫자 받기
-                int choice = scanner.nextInt();
+                    // DAO에게 전제 기기 목록(DTO 묶음) 가져오라고 시키기
+                    ArrayList<SmartDevice> list = dao.getAllDevices();
 
-                // 메뉴 선택에 따른 분기 처리
-                switch (choice){
-                    case 1:  // SELECT 구현
-                        System.out.println("\n### Viewing device list...");
+                    System.out.println("--------------------------------------------");
+                    System.out.println(" ID |         Model         |    Price    |");
+                    System.out.println("--------------------------------------------");
 
-                        // SELECT 쿼리 실행 후 결과 받아오기
-                        String selectSql = "SELECT * FROM SmartDevice ORDER BY id;";
-                        PreparedStatement selectPstmt = conn.prepareStatement(selectSql);
-                        ResultSet rs = selectPstmt.executeQuery();
+                    // 리스트에 있는 DTO를 하나씩 꺼내오기
+                    for(SmartDevice device : list){
+                        // DTO 안에 숨겨진 데이터는 Getter 메서드로 꺼내온다
+                        System.out.printf(" %-2d | %-21s | %d \n",
+                                device.getId(),
+                                device.getName(),
+                                device.getPrice());
+                    }
 
-                        System.out.println("--------------------------------------------");
-                        System.out.println(" ID |         Model         |    Price    |");
-                        System.out.println("--------------------------------------------");
+                    System.out.println("--------------------------------------------");
 
-                        // ResultSet에서 레코드 하나씩 순회하며 결과 출력하기
-                        while(rs.next()){
-                            int id = rs.getInt("id");
-                            String name = rs.getString("name");
-                            int price = rs.getInt("price");
+                    break;
 
-                            System.out.printf(" %-2d | %-21s | %d \n", id, name, price);
-                        }
-                        System.out.println("--------------------------------------------");
+                case 2:  // INSERT 구현
+                    System.out.println("\n### Adding new device...");
 
-                        // 사용이 끝난 자원 반납
-                        rs.close();
-                        selectPstmt.close();
-                        break;
+                    // 사용자로부터 기기 정보 입력 받기
+                    System.out.print("Enter New ID: ");
+                    int newId = scanner.nextInt();
+                    scanner.nextLine();  // 엔터키 찌꺼기 비워주기
 
-                    case 2:  // INSERT 구현
-                        System.out.println("\n### Adding new device...");
+                    System.out.print("Enter Model Name: ");
+                    String newName = scanner.nextLine();
 
-                        // 사용자로부터 기기 정보 입력 받기
-                        System.out.print("Enter New ID: ");
-                        int newId = scanner.nextInt();
-                        scanner.nextLine();  // 엔터키 찌꺼기 비워주기
+                    System.out.print("Enter Price: ");
+                    int newPrice = scanner.nextInt();
 
-                        System.out.print("Enter Model Name: ");
-                        String newName = scanner.nextLine();
+                    // DTO 하나에 데이터들을 예쁘게 포장
+                    SmartDevice device = new SmartDevice(newId, newName, newPrice);
 
-                        System.out.print("Enter Price: ");
-                        int newPrice = scanner.nextInt();
+                    // 포장된 DTO를 DAO에게 전달하여 데이터베이스에 삽입
+                    int insertResult = dao.insertDevice(device);
+                    System.out.println("Success: " + insertResult + " device added!");
 
-                        // INSERT 쿼리
-                        String insertSql = "INSERT INTO SmartDevice (id, name, price) VALUES (?, ?, ?);";
-                        PreparedStatement insertPstmt = conn.prepareStatement(insertSql);
+                    break;
 
-                        insertPstmt.setInt(1, newId);
-                        insertPstmt.setString(2, newName);
-                        insertPstmt.setInt(3, newPrice);
+                case 3:  // UPDATE 구현
+                    System.out.println("\n### Updating device price...");
 
-                        int insertResult = insertPstmt.executeUpdate();
-                        System.out.println("Success: " + insertResult + " device added!");
+                    // 수정할 기기의 ID와 새로운 가격 입력 받기
+                    System.out.print("Enter Target ID: ");
+                    int targetId = scanner.nextInt();
 
-                        // 사용한 자원 반납
-                        insertPstmt.close();
-                        break;
+                    System.out.print("Enter New Price: ");
+                    int updatePrice = scanner.nextInt();
 
-                    case 3:  // UPDATE 구현
-                        System.out.println("\n### Updating device price...");
+                    // DAO에게 ID와 새로운 가격을 넘겨주며 수정을 지시
+                    int updateResult = dao.updateDevice(targetId, updatePrice);
 
-                        // 수정할 기기의 ID와 새로운 가격 입력 받기
-                        System.out.print("Enter Target ID: ");
-                        int targetId = scanner.nextInt();
+                    if(updateResult > 0) {
+                        System.out.println("Success: Price Updated!");
+                    } else {
+                        System.out.println("Fail: ID not found");
+                    }
 
-                        System.out.print("Enter New Price: ");
-                        int updatePrice = scanner.nextInt();
+                    break;
 
-                        // UPDATE 쿼리
-                        String updateSql = "UPDATE SmartDevice SET price = ? WHERE id = ?;";
-                        PreparedStatement updatePstmt = conn.prepareStatement(updateSql);
+                case 4:  // DELETE 구현
+                    System.out.println("\n### Deleting device...");
 
-                        updatePstmt.setInt(1, updatePrice);
-                        updatePstmt.setInt(2, targetId);
+                    System.out.print("Enter Target ID to Delete: ");
+                    int deleteId = scanner.nextInt();
 
-                        int updateResult = updatePstmt.executeUpdate();
-                        if(updateResult > 0) {
-                            System.out.println("Success: Price Updated!");
-                        } else {
-                            System.out.println("Fail: ID not found");
-                        }
+                    // DAO에게 삭제할 ID를 넘겨주며 삭제를 지시
+                    int deleteResult = dao.deleteDevice(deleteId);
 
-                        // 사용한 자원 반납
-                        updatePstmt.close();
-                        break;
+                    if(deleteResult > 0) {
+                        System.out.println("Success: Device Deleted!");
+                    } else {
+                        System.out.println("Fail: ID not found");
+                    }
 
-                    case 4:  // DELETE 구현
-                        System.out.println("\n### Deleting device...");
+                    break;
 
-                        System.out.print("Enter Target ID to Delete: ");
-                        int deleteId = scanner.nextInt();
-
-                        // DELETE 쿼리
-                        String deleteSql = "DELETE FROM SmartDevice WHERE id = ?;";
-                        PreparedStatement deletePstmt = conn.prepareStatement(deleteSql);
-                        deletePstmt.setInt(1, deleteId);
-
-                        int deleteResult = deletePstmt.executeUpdate();
-                        if(deleteResult > 0){
-                            System.out.println("Success: Device Deleted!");
-                        } else {
-                            System.out.println("Fail: ID not found");
-                        }
-
-                        // 사용한 자원 반납
-                        deletePstmt.close();
-                        break;
-
-                    case 0:
-                        System.out.println("\n### Exiting system... Good bye!");
-                        isRunning = false;  // 루프 종료 조건
-                        break;
-                    default:
-                        System.out.println("\nInvalid input! Please try again!");
-                }
+                case 0:
+                    System.out.println("\n### Exiting system... Good bye!");
+                    isRunning = false;  // 루프 종료 조건
+                    break;
+                default:
+                    System.out.println("\nInvalid input! Please try again!");
             }
-
-            // 프로그램 종료시 자원 반납
-            conn.close();
-            scanner.close();
-
-        } catch (SQLException e) {
-            // 데이터베이스 연결 실패시
-            System.out.println("\nERROR: DB Connection Failed!");
-            System.out.println("Details: " + e.getMessage());
         }
+
+        // 프로그램 종료시 자원 반납
+        scanner.close();
     }
 }
